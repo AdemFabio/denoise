@@ -1,24 +1,28 @@
 from datetime import timedelta
 import subprocess
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 YOUTUBE_BASE_URL = "https://www.youtube.com/watch?v="
 
 
-def get_video_audio_urls(youtube_id:str) -> Tuple[str]:
+def get_video_audio_urls(youtube_id:str, max_height:Optional[int]=480) -> Tuple[str]:
     """
     Returns the urls of the video and the audio stream of a youtube video
 
     Args:
         youtube_id: the identifier of the youtube video in the URL after `watch?v=
+        max_height: maximum video height. Defaults to 480 pixels
     
     Returns:
         the video and audio stream URLs as strings
 `
     """
-    
-    result = subprocess.run(f'youtube-dl -g "{YOUTUBE_BASE_URL + youtube_id}"',
+
+    quality_args = f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]"
+    cmd = f'youtube-dl -f "{quality_args}" -g "{YOUTUBE_BASE_URL + youtube_id}"'
+
+    result = subprocess.run(cmd,
                             capture_output=True,
                             shell=True,
                             encoding="utf8")
@@ -40,7 +44,7 @@ def get_video_audio_urls(youtube_id:str) -> Tuple[str]:
         return None
 
 
-def download_partial_video_from_youtube(youtube_id:str, start_time:float, duration:float):
+def download_partial_video_from_youtube(youtube_id:str, start_time:float, duration:float, max_height:Optional[int]=480):
     """
     Downloads a section of a youtube video beginning at `start_time`
 
@@ -48,10 +52,11 @@ def download_partial_video_from_youtube(youtube_id:str, start_time:float, durati
         youtube_id: the identifier of the youtube video in the URL after `watch?v=`
         start_time: start time of the desired section in seconds
         duration: length of the desired section in section
+        max_height: maximum video height. Defaults to 480 pixels
         
     """
     
-    video_url, audio_url = get_video_audio_urls(youtube_id)
+    video_url, audio_url = get_video_audio_urls(youtube_id, max_height)
     
     start_time = timedelta(seconds=start_time)
     duration = timedelta(seconds=duration)
@@ -68,4 +73,5 @@ def download_partial_video_from_youtube(youtube_id:str, start_time:float, durati
 
 
 if __name__ == "__main__":
-    download_partial_video_from_youtube("T-lBMrjZ3_0", 180, 3.5)
+    
+    download_partial_video_from_youtube("T-lBMrjZ3_0", 180, 3.5, 240)
