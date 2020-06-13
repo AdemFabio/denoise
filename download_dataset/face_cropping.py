@@ -13,7 +13,6 @@ class FaceCropper:
     Class that provides utility methods to crop a face out of a video.
     
     Attributes:
-        out_dir: directory to save the cropped videos to
         num_detect_points: the number of intermediate
             frames for which face detection is performed.
         model (torch.Module): a face detection network
@@ -22,7 +21,6 @@ class FaceCropper:
 
     def __init__(
         self,
-        out_dir: Optional[str] = "./",
         num_detect_points: Optional[int] = 2,
         device: Optional[torch.device] = None,
     ):
@@ -30,7 +28,6 @@ class FaceCropper:
         Constructor of FaceCropper
         
         Arguments:
-            out_dir: directory to save the cropped videos to
             num_detect_points: the number of intermediate frames for
                 which face detection is performed.
                 Has to have a minimum number of 2.
@@ -48,11 +45,13 @@ class FaceCropper:
                 "Face detection has to be performed for at least two frames in order to interpolate its position"
             )
 
-        self.out_dir = out_dir
         self.num_detect_points = num_detect_points
         self.model = MTCNN(keep_all=True, device=device)
 
-    def cut_face_from_video(self, path: Union[str, Path]) -> int:
+    def cut_face_from_video(self,
+                            path: Union[str, Path],
+                            out_dir: Optional[str] = "./",
+    ) -> int:
         """
         Helper method to cut a single face out of a video file
         called `filename`.
@@ -60,6 +59,7 @@ class FaceCropper:
         Args:
             path: the path of the video out of which the face shall
                 be cut out
+            out_dir: directory to save the cropped videos to
         
         Returns:
             0 if a single face was found in the video and could be cropped
@@ -139,7 +139,7 @@ class FaceCropper:
             cropped_frames[frame_idx, ...] = cropped_face
 
         skvideo.io.vwrite(
-            os.path.join(self.out_dir, f"cropped_{path.name}"), cropped_frames
+            os.path.join(out_dir, f"cropped_{path.name}"), cropped_frames
         )
 
         return 0

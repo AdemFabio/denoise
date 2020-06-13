@@ -1,10 +1,9 @@
 import os
-from datetime import timedelta
 import subprocess
+from datetime import timedelta
 from typing import Optional, Tuple
 
 import youtube_dl
-
 
 YOUTUBE_BASE_URL = "https://www.youtube.com/watch?v="
 
@@ -34,7 +33,7 @@ def get_video_audio_urls(
                 f"{YOUTUBE_BASE_URL}{youtube_id}", download=False
             )
     except youtube_dl.utils.DownloadError as e:
-        return None
+        return None, None
 
     video_and_audio_info_dict = info_dict.get("requested_formats")
 
@@ -44,7 +43,7 @@ def get_video_audio_urls(
 
         return video_url, audio_url
     else:
-        return None
+        return None, None
 
 
 def download_partial_video_from_youtube(
