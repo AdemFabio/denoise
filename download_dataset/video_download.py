@@ -1,8 +1,9 @@
 import os
-from datetime import timedelta
 import subprocess
+from datetime import timedelta
 from typing import Optional, Tuple
 
+import youtube_dl
 
 YOUTUBE_BASE_URL = "https://www.youtube.com/watch?v="
 
@@ -22,23 +23,27 @@ def get_video_audio_urls(
 
     """
 
-    quality_args = (
-        f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]"
-    )
-    cmd = f'youtube-dl -f "{quality_args}" -g "{YOUTUBE_BASE_URL + youtube_id}"'
+    ydl_opts = {
+        "format": f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]",
+    }
 
-    result = subprocess.run(cmd, capture_output=True, shell=True, encoding="utf8")
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(
+                f"{YOUTUBE_BASE_URL}{youtube_id}", download=False
+            )
+    except youtube_dl.utils.DownloadError as e:
+        return None, None
 
-    if result.returncode != 0:
-        raise FileNotFoundError(
-            "Could not get audio and video URL! (Return code was not 0)"
-        )
+    video_and_audio_info_dict = info_dict.get("requested_formats")
 
-    split_urls = result.stdout.rstrip("\n").split("\n")
-    assert len(split_urls) == 2, "There should be two new line characteres!"
-    video_url, audio_url = split_urls
+    if video_and_audio_info_dict is not None and len(video_and_audio_info_dict) == 2:
+        video_url = video_and_audio_info_dict[0].get("url")
+        audio_url = video_and_audio_info_dict[1].get("url")
 
-    return video_url, audio_url
+        return video_url, audio_url
+    else:
+        return None, None
 
 
 def download_partial_video_from_youtube(
@@ -88,7 +93,7 @@ def download_partial_video_from_youtube(
         download_cmd_audio, capture_output=True, shell=True, encoding="utf8", timeout=10
     )
     if result.returncode != 0:
-        raise FileNotFoundError("Could not download Video! (Return code was not 0)")
+        raise FileNotFoundError("Could not download Audio! (Return code was not 0)")
 
     return file_video, file_audio
 
