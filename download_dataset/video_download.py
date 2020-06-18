@@ -8,6 +8,13 @@ import youtube_dl
 YOUTUBE_BASE_URL = "https://www.youtube.com/watch?v="
 
 
+class UnexpectedURLInfo(Exception):
+    pass
+
+class FailedDownload(Exception):
+    pass
+
+
 def get_video_audio_urls(
     youtube_id: str, max_height: Optional[int] = 480
 ) -> Tuple[str, str]:
@@ -27,13 +34,11 @@ def get_video_audio_urls(
         "format": f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]",
     }
 
-    try:
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(
-                f"{YOUTUBE_BASE_URL}{youtube_id}", download=False
-            )
-    except youtube_dl.utils.DownloadError as e:
-        return None, None
+
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(
+            f"{YOUTUBE_BASE_URL}{youtube_id}", download=False
+        )
 
     video_and_audio_info_dict = info_dict.get("requested_formats")
 
@@ -43,7 +48,7 @@ def get_video_audio_urls(
 
         return video_url, audio_url
     else:
-        return None, None
+        raise UnexpectedURLInfo(f"Youtube ID {youtube_id} gave unexpected results!")
 
 
 def download_partial_video_from_youtube(
@@ -76,7 +81,7 @@ def download_partial_video_from_youtube(
         raise FileExistsError(f"{file_audio} already exists!")
 
     video_url, audio_url = get_video_audio_urls(youtube_id, max_height)
-
+    
     start_time = timedelta(seconds=start_time)
     duration = timedelta(seconds=duration)
 
@@ -87,13 +92,13 @@ def download_partial_video_from_youtube(
         download_cmd_video, capture_output=True, shell=True, encoding="utf8", timeout=10
     )
     if result.returncode != 0:
-        raise FileNotFoundError("Could not download Video! (Return code was not 0)")
+        raise FailedDownload(f"Could not download Video for id {youtube_id}! (Return code was not 0)")
 
     result = subprocess.run(
         download_cmd_audio, capture_output=True, shell=True, encoding="utf8", timeout=10
     )
     if result.returncode != 0:
-        raise FileNotFoundError("Could not download Audio! (Return code was not 0)")
+        raise FailedDownload(f"Could not download Audio for id {youtube_id}! (Return code was not 0)")
 
     return file_video, file_audio
 

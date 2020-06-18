@@ -3,12 +3,23 @@ import docker
 from celery import Celery
 from celery.bin import worker
 
-app = Celery(
-    'denoise',
+from kombu import Exchange, Queue
+
+
+app = Celery('download_dataset_app')
+app.config_from_object(dict(
     broker='amqp://localhost',
     backend='amqp://',
-    include=['download_dataset.celery_tasks']
-)
+    include=['download_dataset.celery_tasks'],
+    task_queues=[Queue(
+        'download_dataset',
+        Exchange('download_dataset'),
+        routing_key='download_dataset',
+        queue_arguments={'x-max-priority': 10}
+    )],
+    task_acks_late=True,
+    worker_prefetch_multiplier=1
+))
 
 def start_rabbitmq_container():
     client = docker.from_env()
